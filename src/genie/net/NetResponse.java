@@ -24,8 +24,9 @@ import genie.world.World;
 public class NetResponse {
 
     public static void connect(Player player, ChannelBuffer buffer, int length) {
-        int version = Integer.parseInt(IOTools.readString(buffer, 9).replaceAll("Terraria", ""));
-
+        String versionStr = IOTools.readString(buffer, 10);
+        System.out.println(versionStr);
+        int version = Integer.parseInt(versionStr.replaceAll("Terraria", ""));
         if (version != NetHandler.VERSION) {
             System.out.println("Version attempt from: " + version);
             sendAuthFailed(player, "Version Mismatch");
@@ -43,6 +44,7 @@ public class NetResponse {
     public static void recvData(Player player, ChannelBuffer buffer, int length) {
         player.setId(buffer.readByte());
         player.setHairId(buffer.readByte());
+        buffer.readByte(); // GENDER
         player.setHairColor(new Color(buffer.readUnsignedByte(), buffer.readUnsignedByte(), buffer.readUnsignedByte()));
         player.setSkinColor(new Color(buffer.readUnsignedByte(), buffer.readUnsignedByte(), buffer.readUnsignedByte()));
         player.setEyeColor(new Color(buffer.readUnsignedByte(), buffer.readUnsignedByte(), buffer.readUnsignedByte()));
@@ -50,8 +52,23 @@ public class NetResponse {
         player.setUnderColor(new Color(buffer.readUnsignedByte(), buffer.readUnsignedByte(), buffer.readUnsignedByte()));
         player.setPantColor(new Color(buffer.readUnsignedByte(), buffer.readUnsignedByte(), buffer.readUnsignedByte()));
         player.setShoeColor(new Color(buffer.readUnsignedByte(), buffer.readUnsignedByte(), buffer.readUnsignedByte()));
-
-        player.setName(IOTools.readString(buffer, length - 24));
+        System.out.println("Length: " + length);
+        player.setDifficulty(buffer.readByte());
+        player.setName(IOTools.readString(buffer, length - 26));
+        System.out.println(player.getName());
+        
+//        if (!player.isSpawned()) {
+//            System.out.println("Spawning: " + player.getName());
+//            ChannelBuffer send = ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 14);
+//            send.writeInt(10);
+//            send.writeByte(Opcodes.SEND_SPAWN);
+//            send.writeByte(player.getId());
+//            send.writeInt((int) player.getLocation().x);
+//            send.writeInt((int) player.getLocation().y);
+//            player.getChannel().write(send);
+//            player.setSpawned(true);
+//            player.setActive(true);
+//        }
     }
 
     //TODO: Armor!
@@ -123,9 +140,10 @@ public class NetResponse {
         int spawnY = buffer.readInt();
         if (!player.isSpawned()) {
             System.out.println("Spawning: " + player.getName());
-            ChannelBuffer send = ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 13);
-            send.writeInt(9);
+            ChannelBuffer send = ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 14);
+            send.writeInt(10);
             send.writeByte(Opcodes.SEND_SPAWN);
+            send.writeByte(player.getId());
             send.writeInt((int) player.getLocation().x);
             send.writeInt((int) player.getLocation().y);
             player.getChannel().write(send);
@@ -138,7 +156,7 @@ public class NetResponse {
 
     public static void recvZoneInfo(Player player, ChannelBuffer buffer, int length) {
         // TODO: WHY YOU SEND 4 BYTES INSTEAD OF 5 EVEN THOUGH UPDATED CLIENT SAYS OTHERWISE?
-        //buffer.readByte(); // playerId
+        buffer.readByte(); // playerId
         player.setEvil(buffer.readByte() != 0 ? true : false);
         player.setMeteor(buffer.readByte() != 0 ? true : false);
         player.setDungeon(buffer.readByte() != 0 ? true : false);
@@ -179,10 +197,18 @@ public class NetResponse {
                 break;
         }
     }
+    
+    public static void recvMessage(Player player, ChannelBuffer buffer, int length) {
+        System.out.println(length);
+        System.out.println(ChannelBuffers.hexDump(buffer, buffer.readerIndex(), length - 1));
+        int id = buffer.readByte(); // Player ID
+        int r = buffer.readUnsignedByte();
+        int g = buffer.readUnsignedByte();
+        int b = buffer.readUnsignedByte();
+        player.broadcastMessage(IOTools.readString(buffer, length - 5), id, r, g, b);
+    }
 
     public static void recvProjectile(Player player, ChannelBuffer buffer, int length) {
-        System.out.println(ChannelBuffers.hexDump(buffer, buffer.readerIndex(), length - 1));
-        System.out.println("Expected Length of: " + (length - 1));
         short uniqueId = buffer.readShort(); // unique id?
         float positionX = buffer.readFloat(); // pos x
         float positionY = buffer.readFloat(); // pos y
@@ -376,6 +402,8 @@ public class NetResponse {
         if (player.getConnectionState() == 2) {
             player.setConnectionState(3);
         }
+
+        player.spawn();
     }
 
     public static void sendAuthFailed(Player player, String message) {

@@ -72,7 +72,7 @@ public class World {
             }
             fis = new FileInputStream(new File(path));
             System.out.println(fis.available());
-            SoftReference<ChannelBuffer> buffer = new SoftReference(ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 2048));
+            SoftReference<ChannelBuffer> buffer = new SoftReference(ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, fis.available()));
             int next = -1;
             byte[] tempBuff = new byte[512];
             while ((next = fis.read()) != -1) {
@@ -122,9 +122,9 @@ public class World {
 
             int activeCount = 0;
             for (int x = 0; x < getMaxX(); x++) {
-                if (x != 0 && (x % 50 == 0 || x == getMaxX() - 1)) {
-                    System.out.println("Loaded: " + ((((float) x) / ((float) getMaxX())) * 100f + 1f) + "%");
-                }
+//                if (x != 0 && (x % 50 == 0 || x == getMaxX() - 1)) {
+//                    System.out.println("Loaded: " + ((((float) x) / ((float) getMaxX())) * 100f + 1f) + "%");
+//                }
 
                 for (int y = 0; y < getMaxY(); y++) {
                     Tile tile = getTiles()[x][y];

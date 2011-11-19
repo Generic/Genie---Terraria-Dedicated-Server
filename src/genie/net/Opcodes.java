@@ -38,6 +38,7 @@ public class Opcodes {
             SEND_ITEM_INFO = 0x15,
             SEND_OWNER_INFO = 0x16,
             SEND_NPC_INFO = 0x17,
+            RECV_MESSAGE = 0x19,
             SEND_MESSAGE = 0x19,
             RECV_PROJECTILE = 0x1B,
             SEND_PROJECTILE = 0x1B,

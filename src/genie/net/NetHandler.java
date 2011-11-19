@@ -24,7 +24,7 @@ import org.jboss.netty.channel.WriteCompletionEvent;
  */
 public class NetHandler extends IdleStateAwareChannelUpstreamHandler {
 
-    public static final int VERSION = 3;
+    public static final int VERSION = 22;
     public static final String PASSWORD = "";
     private static PlayerLocal<Player> players = new PlayerLocal();
 
@@ -32,11 +32,18 @@ public class NetHandler extends IdleStateAwareChannelUpstreamHandler {
 
         ChannelBuffer message = (ChannelBuffer) e.getMessage();
         Player player = players.get(e.getChannel());
-        if (player != null && player.getId() > 0) {
-            System.out.println("Received " + ChannelBuffers.hexDump(message) + " from id: " + player.getId());
-        }
         do {
-            handle(message.readInt(), (Player) players.get(e.getChannel()), message, message.readByte());
+            int length = message.readInt();
+            byte op = message.readByte();
+            int read = message.readerIndex();
+            handle(length, (Player) players.get(e.getChannel()), message, op);
+//            read = message.readerIndex() - read + 1; // +1 for OP
+//            if (read < length) {
+//                System.out.println("Not enough read from OP: " + op + " skipping " + (length - read) + " bytes");
+//                message.skipBytes(length - read);
+//            } else if (read > length) {
+//                System.out.println("Read too many bytes from OP: " + op + " unfixable.");
+//            }
         } while (message.readerIndex() < message.capacity() && message.readableBytes() > 4);
     }
 
@@ -94,6 +101,9 @@ public class NetHandler extends IdleStateAwareChannelUpstreamHandler {
                 break;
             case Opcodes.RECV_MANIPULATE_TILE:
                 NetResponse.recvManipulateTile(player, buffer, length);
+                break;
+            case Opcodes.RECV_MESSAGE:
+                NetResponse.recvMessage(player, buffer, length);
                 break;
             case Opcodes.RECV_PROJECTILE:
                 NetResponse.recvProjectile(player, buffer, length);

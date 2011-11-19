@@ -28,6 +28,7 @@ import genie.world.World;
  * @author Jay
  */
 public class Player {
+
     public static class PlayerFlags {
 
         public static final byte UP = 0x01,
@@ -61,6 +62,7 @@ public class Player {
     private short npcConvo;
     private int connectionState = 0;
     private boolean lock;
+    private byte difficulty;
 
     public Player(Channel channel) {
         this.id = nextFreeId();
@@ -79,7 +81,6 @@ public class Player {
     public Channel getChannel() {
         return channel;
     }
-
 
     private static int nextFreeId() {
         for (int i = 0; i < 8; i++) {
@@ -111,6 +112,7 @@ public class Player {
     public void setName(String name) {
         this.name = name;
     }
+
     /**
      * @return the evil
      */
@@ -166,6 +168,7 @@ public class Player {
     public void setJungle(boolean jungle) {
         this.jungle = jungle;
     }
+
     /**
      * @return the id
      */
@@ -375,7 +378,7 @@ public class Player {
     float number2 = 0f, (float) toSendX
     float number3 = 0f, i
     float number4 = 0f) 0f
-
+    
      */
     public void sendSection(int sectionX, int sectionY, ChannelBuffer buffer) {
         loadedTiles[sectionX][sectionY] = true;
@@ -439,7 +442,7 @@ public class Player {
     float number2 = 0f, (float) tileX - num
     float number3 = 0f, (float) tileY - num
     float number4 = 0f) 0f
-
+    
      */
     /*
      * SendData(20, whoAmi, -1, "", size, (float) (tileX - num), (float) (tileY - num), 0f);
@@ -599,6 +602,14 @@ public class Player {
         getChannel().write(buffer);
     }
 
+    public void broadcastMessage(String message, int id, int r, int g, int b) {
+        for (Player player : NetHandler.getPlayers()) {
+            if (player.isSpawned()) {
+                player.sendMessage(message, id, r, g, b);
+            }
+        }
+    }
+
     public void sendUpdate(Player player) {
 
         byte flag = 0;
@@ -636,6 +647,14 @@ public class Player {
         player.getChannel().write(buffer);
     }
 
+    public byte getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(byte difficulty) {
+        this.difficulty = difficulty;
+    }
+
     public int getConnectionState() {
         return connectionState;
     }
@@ -643,7 +662,34 @@ public class Player {
     public void setConnectionState(int connectionState) {
         this.connectionState = connectionState;
     }
-    
+
+    public void spawn() {
+        //if (!isSpawned()) {
+        System.out.println("Spawning: " + getName());
+        ChannelBuffer send = ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 14);
+        send.writeInt(10);
+        send.writeByte(Opcodes.SEND_SPAWN);
+        send.writeByte(getId());
+        send.writeInt((int) getLocation().x);
+        send.writeInt((int) getLocation().y);
+        getChannel().write(send);
+        setSpawned(true);
+        setActive(true);
+        for (Player other : NetHandler.getPlayers()) {
+            if (getId() != other.getId() && other.isSpawned()) {
+                other.getChannel().write(send);
+                send = ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 14);
+                send.writeInt(10);
+                send.writeByte(Opcodes.SEND_SPAWN);
+                send.writeByte(other.getId());
+                send.writeInt((int) other.getLocation().x);
+                send.writeInt((int) other.getLocation().y);
+                getChannel().write(send);
+            }
+            // }
+        }
+    }
+
     @Override
     public int hashCode() {
         int hash = 7;
